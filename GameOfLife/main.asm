@@ -26,7 +26,7 @@
 LOAD column, 0
 LOAD ramPage, 0
 OUT ramPage, ramPagePORT
-LOAD s0, 79 ; RAM will be filled with letter 'O'
+LOAD s0, 95 ; RAM will be filled with letter 'O'
 
 fillFirstPageOfRam:
     STORE s0, column
@@ -45,15 +45,15 @@ fillSecondPageOfRam:
     JUMP NZ, fillSecondPageOfRam
 
 ; initialize the initial cells
-LOAD s0, 71 ; 88 is an ASCII repr. of 'X'
+LOAD s0, 88	 ; 88 is an ASCII repr. of '_'
 STORE s0, 116
 STORE s0, 117
 STORE s0, 118
 STORE s0, 119
 STORE s0, 120
-LOAD s0, 79 ; 79 is an ASCII repr. of 'O'
+LOAD s0, 95 ; 95 is an ASCII repr. of 'X'
 STORE s0, 121
-LOAD s0, 71
+LOAD s0, 88
 
 STORE s0, 122
 STORE s0, 123
