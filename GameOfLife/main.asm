@@ -31,7 +31,7 @@ LOAD s0, 95 ; RAM will be filled with letter 'O'
 fillFirstPageOfRam:
     STORE s0, column
     ADD column, 1
-    COMP column, 255
+    COMP column, 256
     JUMP NZ, fillFirstPageOfRam
 
 LOAD column, 0
@@ -41,8 +41,11 @@ OUT ramPage, ramPagePORT ; switching to the second page of RAM
 fillSecondPageOfRam:
     STORE s0, column
     ADD column, 1
-    COMP column, 255
+    COMP column, 256
     JUMP NZ, fillSecondPageOfRam
+
+LOAD ramPage, 0
+OUT ramPage, ramPagePORT ; switching to the first page of RAM
 
 ; initialize the initial cells
 LOAD s0, 88	 ; 88 is an ASCII repr. of '_'
@@ -82,7 +85,7 @@ displayBoard:
     ADD isAtTheEOL, 1
     COMP isAtTheEOL, 16
     CALL Z, moveToNextLine
-    COMP row, 16
+    COMP row, 18
     CALL Z, main
     JUMP displayBoard
 
