@@ -20,12 +20,15 @@
 
 
 ; initialize the initial cells
-LOAD s0, 1
+LOAD s0, 88 ; 88 is an ASCII repr. of 'X'
 STORE s0, 116
 STORE s0, 117
 STORE s0, 118
 STORE s0, 119
 STORE s0, 120
+LOAD s0, 79 ; 79 is an ASCII repr. of 'O'
+STORE s0, 121
+LOAD s0, 88
 
 STORE s0, 122
 STORE s0, 123
@@ -37,44 +40,48 @@ LOAD row, 1
 LOAD column, 0
 LOAD isAtTheEOL, 0
 
+; Called for visual alignment in the simulator!
+CALL CarriageReturn
+CALL LineFeed
+
 ; s0 hold value 0
 LOAD s0, 0
 ; initialize board with initial values
-writeCell:
+displayBoard:
     FETCH s0, column
     CALL writeToUart
     ADD column, 1
     ADD isAtTheEOL, 1
     COMP isAtTheEOL, 16
     CALL Z, moveToNextLine
-    COMP row, 15
+    COMP row, 16
     CALL Z, main
-    JUMP writeCell
+    JUMP displayBoard
 
 ; OUT ramPage, ramPagePORT
 
 moveToNextLine:
-    CALL moveCarrotToNextLine
-    CALL checkUart2
+    CALL CarriageReturn
+    CALL LineFeed
     LOAD isAtTheEOL, 0
     ADD row, 1
     RET
 
-moveCarrotToNextLine:
+CarriageReturn:
     ; check if uart_tx full
     IN uart0Status, uart0_statusPORT
     TEST uart0Status, 0b00000100
-    JUMP NZ, moveCarrotToNextLine
+    JUMP NZ, CarriageReturn
     ; end
     LOAD sF, CrChar ; 13 in ASCII is the Carriage Return
     OUT sF, uart0_tx
-		RET
+    RET
 
-checkUart2:
+LineFeed:
     ; check if uart_tx full
     IN uart0Status, uart0_statusPORT
     TEST uart0Status, 0b00000100
-    JUMP NZ, checkUart2
+    JUMP NZ, LineFeed
     ; end
     LOAD sF, LfChar ; 10 in ASCII is the Line Feed
     LOAD uart0Status, 0b00000000
@@ -108,554 +115,8 @@ JUMP main
 ; ---------------RAM INITIALIZATION---------------
 ; ------------------------------------------------
 
-; FIRST RAM PAGE:
 .DSEG 0
-initialBoardPattern:
-; 1 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 2 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 3 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 4 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 5 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 6 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 7 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ZERO
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 8 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 9 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 0 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 1 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 2 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 3 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 4 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 5 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 6 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; SECOND RAM PAGE:
+    .DS 256 ; Initialize 1 Page of RAM
 .DSEG 1
-; 1 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 2 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 3 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 4 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 5 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 6 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 7 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ZERO
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ONE
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 8 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-; 9 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 0 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 1 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 2 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 3 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 4 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 5 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-;1 6 row ------------
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
-    .DS 1 ; ZERO
+    .DS 256 ; Initialize 2 Page of RAM
 .CSEG
-RET
