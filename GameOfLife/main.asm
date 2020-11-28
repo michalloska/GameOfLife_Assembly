@@ -19,8 +19,33 @@
 .CONST LfChar, 10
 
 
+; ------------------------------------------------
+; ---------------FILLING RAM----------------------
+; ------------------------------------------------
+
+LOAD column, 0
+LOAD ramPage, 0
+OUT ramPage, ramPagePORT
+LOAD s0, 79 ; RAM will be filled with letter 'O'
+
+fillFirstPageOfRam:
+    STORE s0, column
+    ADD column, 1
+    COMP column, 255
+    JUMP NZ, fillFirstPageOfRam
+
+LOAD column, 0
+LOAD ramPage, 1
+OUT ramPage, ramPagePORT ; switching to the second page of RAM
+
+fillSecondPageOfRam:
+    STORE s0, column
+    ADD column, 1
+    COMP column, 255
+    JUMP NZ, fillSecondPageOfRam
+
 ; initialize the initial cells
-LOAD s0, 88 ; 88 is an ASCII repr. of 'X'
+LOAD s0, 71 ; 88 is an ASCII repr. of 'X'
 STORE s0, 116
 STORE s0, 117
 STORE s0, 118
@@ -28,12 +53,15 @@ STORE s0, 119
 STORE s0, 120
 LOAD s0, 79 ; 79 is an ASCII repr. of 'O'
 STORE s0, 121
-LOAD s0, 88
+LOAD s0, 71
 
 STORE s0, 122
 STORE s0, 123
 STORE s0, 124
 
+; ------------------------------------------------
+; ---------------DISPLAYING RAM-------------------
+; ------------------------------------------------
 
 ; board iterators initialization
 LOAD row, 1
@@ -57,8 +85,6 @@ displayBoard:
     COMP row, 16
     CALL Z, main
     JUMP displayBoard
-
-; OUT ramPage, ramPagePORT
 
 moveToNextLine:
     CALL CarriageReturn
@@ -101,14 +127,6 @@ writeToUart:
 
 main:
 JUMP main
-
-
-
-
-
-; ------------------------------------------------
-; ---------------DELAY FUNCTIONS------------------
-; ------------------------------------------------
 
 
 ; ------------------------------------------------
