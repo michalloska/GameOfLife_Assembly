@@ -2,7 +2,7 @@
 .PORT ramPagePORT, 0xF0
 ; currently selected RAM page
 .REG s3, ramPage
-; current rowIdx of the RAM page
+; current row of the RAM page
 .REG s4, rowIdx
 ; current RAM address
 .REG s5, columnIdx
