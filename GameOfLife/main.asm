@@ -495,30 +495,30 @@ GiveBirthToCell:
 ; ---------------DELAY FUNCTIONS------------------
 ; ------------------------------------------------
 For1:
-	load s0, 255
-	wait1:
-		sub s0, 1
-		jump nz, wait1
-	RET
+    load s0, 255
+    wait1:
+       sub s0, 1
+       jump nz, wait1
+    RET
 
 For2:
-	load s2, 255
-	wait2:
-		call For1
-		sub s2, 1
-		jump nz, wait2
-	RET
+    load s2, 255
+    wait2:
+        call For1
+        sub s2, 1
+        jump nz, wait2
+    RET
 
 For3:
-	load sD, 255
-	wait3:
-		call For2
-		sub sD, 1
-		jump nz, wait3
-	RET
+    load sD, 255
+    wait3:
+       call For2
+       sub sD, 1
+       jump nz, wait3
+    RET
 
 Wait_07s:
-	call For3
+    call For3
 RET
 
 ; ------------------------------------------------
