@@ -1,2 +1,12 @@
-# GameOfLife_Assembly
-A project created in Picasso Assembly Language which displays a 16x16 Game Of Life Cellular Automata on the UART protocol
+```
+ $$$$$$\   $$$$$$\  $$\      $$\ $$$$$$$$\        $$$$$$\  $$$$$$$$\       $$\       $$$$$$\ $$$$$$$$\ $$$$$$$$\ 
+$$  __$$\ $$  __$$\ $$$\    $$$ |$$  _____|      $$  __$$\ $$  _____|      $$ |      \_$$  _|$$  _____|$$  _____|
+$$ /  \__|$$ /  $$ |$$$$\  $$$$ |$$ |            $$ /  $$ |$$ |            $$ |        $$ |  $$ |      $$ |      
+$$ |$$$$\ $$$$$$$$ |$$\$$\$$ $$ |$$$$$\          $$ |  $$ |$$$$$\          $$ |        $$ |  $$$$$\    $$$$$\    
+$$ |\_$$ |$$  __$$ |$$ \$$$  $$ |$$  __|         $$ |  $$ |$$  __|         $$ |        $$ |  $$  __|   $$  __|   
+$$ |  $$ |$$ |  $$ |$$ |\$  /$$ |$$ |            $$ |  $$ |$$ |            $$ |        $$ |  $$ |      $$ |      
+\$$$$$$  |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\        $$$$$$  |$$ |            $$$$$$$$\ $$$$$$\ $$ |      $$$$$$$$\ 
+ \______/ \__|  \__|\__|     \__|\________|       \______/ \__|            \________|\______|\__|      \________|
+```
+Game Of Life Cellular Automata using the UART (TX) protocol to display simulation on a 16x16 board
+A project created in Picasso Assembly Language for the PicoBlaze 8-bit Embedded Microcontroller
