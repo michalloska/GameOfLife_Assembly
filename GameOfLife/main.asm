@@ -22,6 +22,9 @@
 .REG s7, tempColumnIdx
 ; Register containing the current value fetched from RAM from the address: tempColumnIdx
 .REG s8, tempColumnIdxValue
+; Register containing the number of the current simulation iteration
+.REG sE, simulationIterator
+.CONST amountOfSimulationIterations, 10
 
 ; ASCII consts:
 .CONST aliveCell, 88  ; ASCII 'X'
@@ -74,6 +77,8 @@ STORE s0, 124
 ; ------------------------------------------------
 ; ---------------DISPLAYING RAM-------------------
 ; ------------------------------------------------
+
+ExecuteNextIteration:
 
 ; board iterators initialization
 LOAD rowIdx, 0
@@ -139,14 +144,36 @@ WriteToUart:
     RET
 
 Main:
-    JUMP Main
+    ; LOAD rowIdx, 0
+    LOAD columnIdx, 0
+    ; LOAD isAtTheEOL, 0
 
-; board iterators initialization
-; LOAD rowIdx, 0
-; LOAD columnIdx, 0
-; LOAD isAtTheEOL, 0
-; LOAD s0, 0
+    ADD simulationIterator, 1
+    COMP simulationIterator, amountOfSimulationIterations
+    JUMP NZ, rewriteSecondRamPageToTheFirstPage
+    JUMP END
 
+; code execution ends here
+END:
+    JUMP END
+
+rewriteSecondRamPageToTheFirstPage:
+    ; switch to page 2
+    LOAD ramPage, 1
+    OUT ramPage, ramPagePORT
+
+    FETCH s0, columnIdx
+
+    ; switch to page 1
+    LOAD ramPage, 0
+    OUT ramPage, ramPagePORT
+
+    STORE s0, columnIdx
+
+    ADD columnIdx, 1
+    COMP columnIdx, 0 ; should be 256 but was changed to 0 due to stack overflow
+    JUMP NZ, rewriteSecondRamPageToTheFirstPage
+    JUMP ExecuteNextIteration
 
 ;count neighbors of all cells in the first RAM page
 ;and save the result in the second RAM page
