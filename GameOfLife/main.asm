@@ -93,7 +93,7 @@ DisplayBoard:
     ADD isAtTheEOL, 1
     COMP isAtTheEOL, 16
     CALL Z, MoveToNextLine
-    COMP rowIdx, 17
+    COMP rowIdx, 16
     CALL Z, Main
     JUMP DisplayBoard
 
@@ -137,7 +137,7 @@ WriteToUart:
     RET
 
 Main:
-    CALL CountNeighbors
+;    CALL CountNeighbors
     JUMP Main
 
 ; board iterators initialization
