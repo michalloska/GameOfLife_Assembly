@@ -20,6 +20,8 @@
 .REG s6, neighborCounter
 ; Register containing the current temporary column ID for neighbor counting
 .REG s7, tempColumnIdx
+; Register containing the current value fetched from RAM from the address: tempColumnIdx
+.REG s8, tempColumnIdxValue
 
 ; ASCII consts:
 .CONST deadCell, 88  ; ASCII '_'
@@ -85,17 +87,17 @@ CALL LineFeed
 ; s0 hold value 0
 LOAD s0, 0
 ; initialize board with initial values
-DisplayBoard:
+MainIterationLoop:
     FETCH s0, columnIdx
     CALL WriteToUart
-    ; CALL CountNeighbors
+    CALL CountNeighbors
     ADD columnIdx, 1
     ADD isAtTheEOL, 1
     COMP isAtTheEOL, 16
     CALL Z, MoveToNextLine
     COMP rowIdx, 16
     CALL Z, Main
-    JUMP DisplayBoard
+    JUMP MainIterationLoop
 
 MoveToNextLine:
     CALL CarriageReturn
@@ -137,24 +139,22 @@ WriteToUart:
     RET
 
 Main:
-;    CALL CountNeighbors
     JUMP Main
 
 ; board iterators initialization
-LOAD rowIdx, 0
-LOAD columnIdx, 0
-LOAD isAtTheEOL, 0
-LOAD s0, 0
-LOAD neighborCounter, 0
-LOAD tempColumnIdx, 0
-LOAD s8, 0 ; tempColumnIdx value
+; LOAD rowIdx, 0
+; LOAD columnIdx, 0
+; LOAD isAtTheEOL, 0
+; LOAD s0, 0
+
 
 ;count neighbors of all cells in the first RAM page
 ;and save the result in the second RAM page
 CountNeighbors:
-    FETCH s0, columnIdx
+    LOAD neighborCounter, 0
+    LOAD tempColumnIdx, 0
+    LOAD tempColumnIdxValue, 0 ; tempColumnIdx value
 
-; isAtTheEOL = 0
 CheckCorners:
     ; Left Top Corner
     COMP columnIdx, 0
@@ -181,110 +181,210 @@ CheckSides:
     COMP isAtTheEOL, 15
     JUMP Z, RightEdgePositionCount
 
-    ; Somewhere in the middle of the board
+    ; TOP/BOTTOM/MIDDLE of the board
     JUMP RegularPositionCount
 
 LeftTopCorner:
-;...
-RET
+    LOAD tempColumnIdx, columnIdx
+    ;move from the middle to the left
+    LOAD tempColumnIdx, 15
+    CALL checkIfTempColumnIdxIsAlive
+    ;move up
+    LOAD tempColumnIdx, 255
+    CALL checkIfTempColumnIdxIsAlive
+    ;move right
+    LOAD tempColumnIdx, 240
+    CALL checkIfTempColumnIdxIsAlive
+    ;move right
+    LOAD tempColumnIdx, 241
+    CALL checkIfTempColumnIdxIsAlive
+    ;move down
+    LOAD tempColumnIdx, 1
+    CALL checkIfTempColumnIdxIsAlive
+    ;move down
+    LOAD tempColumnIdx, 17
+    CALL checkIfTempColumnIdxIsAlive
+    ;move left
+    LOAD tempColumnIdx, 16
+    CALL checkIfTempColumnIdxIsAlive
+    ;move left
+    LOAD tempColumnIdx, 31
+    CALL checkIfTempColumnIdxIsAlive
+    JUMP EvaluateCellsLife
+
 LeftBottomCorner:
-;...
-RET
+    LOAD tempColumnIdx, columnIdx
+    ;move from the middle to the left
+    LOAD tempColumnIdx, 255
+    CALL checkIfTempColumnIdxIsAlive
+    ;move up
+    LOAD tempColumnIdx, 239
+    CALL checkIfTempColumnIdxIsAlive
+    ;move right
+    LOAD tempColumnIdx, 224
+    CALL checkIfTempColumnIdxIsAlive
+    ;move right
+    LOAD tempColumnIdx, 225
+    CALL checkIfTempColumnIdxIsAlive
+    ;move down
+    LOAD tempColumnIdx, 241
+    CALL checkIfTempColumnIdxIsAlive
+    ;move down
+    LOAD tempColumnIdx, 1
+    CALL checkIfTempColumnIdxIsAlive
+    ;move left
+    LOAD tempColumnIdx, 0
+    CALL checkIfTempColumnIdxIsAlive
+    ;move left
+    LOAD tempColumnIdx, 15
+    CALL checkIfTempColumnIdxIsAlive
+    JUMP EvaluateCellsLife
+
 RightTopCorner:
-;...
-RET
+    LOAD tempColumnIdx, columnIdx
+    ;move from the middle to the left
+    LOAD tempColumnIdx, 14
+    CALL checkIfTempColumnIdxIsAlive
+    ;move up
+    LOAD tempColumnIdx, 254
+    CALL checkIfTempColumnIdxIsAlive
+    ;move right
+    LOAD tempColumnIdx, 255
+    CALL checkIfTempColumnIdxIsAlive
+    ;move right
+    LOAD tempColumnIdx, 240
+    CALL checkIfTempColumnIdxIsAlive
+    ;move down
+    LOAD tempColumnIdx, 0
+    CALL checkIfTempColumnIdxIsAlive
+    ;move down
+    LOAD tempColumnIdx, 16
+    CALL checkIfTempColumnIdxIsAlive
+    ;move left
+    LOAD tempColumnIdx, 31
+    CALL checkIfTempColumnIdxIsAlive
+    ;move left
+    LOAD tempColumnIdx, 30
+    CALL checkIfTempColumnIdxIsAlive
+    JUMP EvaluateCellsLife
+
 RightBottomCorner:
-;...
-RET
+    LOAD tempColumnIdx, columnIdx
+    ;move from the middle to the left
+    LOAD tempColumnIdx, 254
+    CALL checkIfTempColumnIdxIsAlive
+    ;move up
+    LOAD tempColumnIdx, 238
+    CALL checkIfTempColumnIdxIsAlive
+    ;move right
+    LOAD tempColumnIdx, 239
+    CALL checkIfTempColumnIdxIsAlive
+    ;move right
+    LOAD tempColumnIdx, 224
+    CALL checkIfTempColumnIdxIsAlive
+    ;move down
+    LOAD tempColumnIdx, 240
+    CALL checkIfTempColumnIdxIsAlive
+    ;move down
+    LOAD tempColumnIdx, 0
+    CALL checkIfTempColumnIdxIsAlive
+    ;move left
+    LOAD tempColumnIdx, 15
+    CALL checkIfTempColumnIdxIsAlive
+    ;move left
+    LOAD tempColumnIdx, 14
+    CALL checkIfTempColumnIdxIsAlive
+    JUMP EvaluateCellsLife
+
 
 ;works for top and bottom edges and the middle of the board
 RegularPositionCount:
     LOAD tempColumnIdx, columnIdx
     ;move from the middle to the left
     SUB tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move up
     SUB tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move right
     ADD tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move right
     ADD tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move down
     ADD tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move down
     ADD tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move left
     SUB tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move left
     SUB tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     JUMP EvaluateCellsLife
 
 LeftEdgePositionCount:
     LOAD tempColumnIdx, columnIdx
     ;move from the middle to the left
     ADD tempColumnIdx, 15
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move up
     SUB tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move right
     SUB tempColumnIdx, 15
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move right
     ADD tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move down
     ADD tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move down
     ADD tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move left
     SUB tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move left
     ADD tempColumnIdx, 15
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     JUMP EvaluateCellsLife
 
 RightEdgePositionCount:
     LOAD tempColumnIdx, columnIdx
     ;move from the middle to the left
     SUB tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move up
     SUB tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move right
     ADD tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move right
     SUB tempColumnIdx, 15
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move down
     ADD tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move down
     ADD tempColumnIdx, 16
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move left
     ADD tempColumnIdx, 15
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     ;move left
     SUB tempColumnIdx, 1
-    CALL checkTempColumnIdxValue
+    CALL checkIfTempColumnIdxIsAlive
     JUMP EvaluateCellsLife
 
-checkTempColumnIdxValue:
-    FETCH s8, tempColumnIdx
-    COMP s8, aliveCell
+checkIfTempColumnIdxIsAlive:
+    FETCH tempColumnIdxValue, tempColumnIdx
+    COMP tempColumnIdxValue, aliveCell
     JUMP NZ, goBack
     incrementAliveCounter:
         ADD neighborCounter, 1
