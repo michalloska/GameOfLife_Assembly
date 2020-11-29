@@ -1,3 +1,8 @@
+;-------------------------------------------------------
+; PicoBlaze Conway's Game Of Life on UART (TX) Interface
+; © Michal Loska 29.11.2020
+;-------------------------------------------------------
+
 ; port used to select currently active RAM page (x/8)
 .PORT ramPagePORT, 0xF0
 ; currently selected RAM page
@@ -5,7 +10,7 @@
 ; current row of the RAM page
 .REG s4, rowIdx
 ; current RAM address
-.REG s5, columnIdx
+.REG s5, cellIdx
 ; indicates whether the carrot is at the EOL
 .REG s1, isAtTheEOL
 ; UART transmission port used to output data to the protocol
@@ -19,48 +24,57 @@
 ; Register containing the current amount of neighbors of a given cell
 .REG s6, neighborCounter
 ; Register containing the current temporary column ID for neighbor counting
-.REG s7, tempColumnIdx
-; Register containing the current value fetched from RAM from the address: tempColumnIdx
-.REG s8, tempColumnIdxValue
+.REG s7, tempcellIdx
+; Register containing the current value fetched from RAM from the address: tempcellIdx
+.REG s8, tempcellIdxValue
 ; Register containing the number of the current simulation iteration
 .REG sE, simulationIterator
-.CONST amountOfSimulationIterations, 10
+.CONST amountOfSimulationIterations, 30
 
 ; ASCII consts:
 .CONST aliveCell, 88  ; ASCII 'X'
 .CONST deadCell, 95 ; ASCII '_'
 .CONST CR_char, 13
 .CONST LF_char, 10
+
 ; ------------------------------------------------
 ; ---------------FILLING RAM----------------------
 ; ------------------------------------------------
 
-LOAD columnIdx, 0
+LOAD cellIdx, 0
 LOAD ramPage, 0
 OUT ramPage, ramPagePORT
 LOAD s0, deadCell
 
 FillFirstPageOfRam:
-    STORE s0, columnIdx
-    ADD columnIdx, 1
-    COMP columnIdx, 0 ; in fact we compare against 256 which overflows to 0
+    STORE s0, cellIdx
+    ADD cellIdx, 1
+    COMP cellIdx, 0 ; in fact we compare against 256 which overflows to 0
     JUMP NZ, FillFirstPageOfRam
 
-LOAD columnIdx, 0
+LOAD cellIdx, 0
 LOAD ramPage, 1
 OUT ramPage, ramPagePORT ; switching to the second page of RAM
 
 FillSecondPageOfRam:
-    STORE s0, columnIdx
-    ADD columnIdx, 1
-    COMP columnIdx, 0 ; in fact we compare against 256 which overflows to 0
+    STORE s0, cellIdx
+    ADD cellIdx, 1
+    COMP cellIdx, 0 ; in fact we compare against 256 which overflows to 0
     JUMP NZ, FillSecondPageOfRam
 
 LOAD ramPage, 0
 OUT ramPage, ramPagePORT ; switching to the first page of RAM
 
-; initialize the initial cells
+; Set the initial alive cells (in RAM memory blocks)
 LOAD s0, aliveCell
+STORE s0, 0
+STORE s0, 16
+STORE s0, 32
+
+STORE s0, 223
+STORE s0, 239
+STORE s0, 255
+
 STORE s0, 116
 STORE s0, 117
 STORE s0, 118
@@ -75,14 +89,14 @@ STORE s0, 123
 STORE s0, 124
 
 ; ------------------------------------------------
-; ---------------DISPLAYING RAM-------------------
+; ---------------MAIN LOOP------------------------
 ; ------------------------------------------------
 
 ExecuteNextIteration:
 
 ; board iterators initialization
 LOAD rowIdx, 0
-LOAD columnIdx, 0
+LOAD cellIdx, 0
 LOAD isAtTheEOL, 0
 
 ; Called for visual alignment in the simulator!
@@ -93,16 +107,20 @@ CALL LineFeed
 LOAD s0, 0
 ; initialize board with initial values
 MainIterationLoop:
-    FETCH s0, columnIdx
+    FETCH s0, cellIdx
     CALL WriteToUart
-    CALL CountNeighbors ; countNeighborsAndGenerate2Iteration
-    ADD columnIdx, 1
+    CALL CountNeighbors ; countNeighborsAndGenerate2ndIteration
+    ADD cellIdx, 1
     ADD isAtTheEOL, 1
     COMP isAtTheEOL, 16
     CALL Z, MoveToNextLine
     COMP rowIdx, 16
-    CALL Z, Main
+    JUMP Z, Main
     JUMP MainIterationLoop
+
+; ------------------------------------------------
+; ---------------DISPLAYING RAM(UART)-------------
+; ------------------------------------------------
 
 MoveToNextLine:
     CALL CarriageReturn
@@ -144,9 +162,8 @@ WriteToUart:
     RET
 
 Main:
-    ; LOAD rowIdx, 0
-    LOAD columnIdx, 0
-    ; LOAD isAtTheEOL, 0
+    CALL Wait_07s
+    LOAD cellIdx, 0
 
     ADD simulationIterator, 1
     COMP simulationIterator, amountOfSimulationIterations
@@ -162,41 +179,45 @@ rewriteSecondRamPageToTheFirstPage:
     LOAD ramPage, 1
     OUT ramPage, ramPagePORT
 
-    FETCH s0, columnIdx
+    FETCH s0, cellIdx
 
     ; switch to page 1
     LOAD ramPage, 0
     OUT ramPage, ramPagePORT
 
-    STORE s0, columnIdx
+    STORE s0, cellIdx
 
-    ADD columnIdx, 1
-    COMP columnIdx, 0 ; should be 256 but was changed to 0 due to stack overflow
+    ADD cellIdx, 1
+    COMP cellIdx, 0 ; should be 256 but was changed to 0 due to stack overflow
     JUMP NZ, rewriteSecondRamPageToTheFirstPage
     JUMP ExecuteNextIteration
+
+; ------------------------------------------------
+; ---------------NEIGHBOR COUNTING LOGIC----------
+; ------------------------------------------------
 
 ;count neighbors of all cells in the first RAM page
 ;and save the result in the second RAM page
 CountNeighbors:
     LOAD neighborCounter, 0
-    LOAD tempColumnIdx, 0
-    LOAD tempColumnIdxValue, 0 ; tempColumnIdx value
+    LOAD tempcellIdx, 0
+    LOAD tempcellIdxValue, 0 ; tempcellIdx value
 
 CheckCorners:
     ; Left Top Corner
-    COMP columnIdx, 0
+    COMP cellIdx, 0
     JUMP Z, LeftTopCorner
 
     ; Left Bottom Corner
-    COMP columnIdx, 240
+    COMP cellIdx, 240
     JUMP Z, LeftBottomCorner
 
     ; Right Top Corner
-    COMP columnIdx, 15
+    COMP cellIdx, 15
     JUMP Z, RightTopCorner
 
     ; Right Bottom Corner
-    COMP columnIdx, 255
+    COMP cellIdx, 255
     JUMP Z, RightBottomCorner
 
 CheckSides:
@@ -212,206 +233,206 @@ CheckSides:
     JUMP RegularPositionCount
 
 LeftTopCorner:
-    LOAD tempColumnIdx, columnIdx
+    LOAD tempcellIdx, cellIdx
     ;move from the middle to the left
-    LOAD tempColumnIdx, 15
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 15
+    CALL checkIfTempcellIdxIsAlive
     ;move up
-    LOAD tempColumnIdx, 255
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 255
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    LOAD tempColumnIdx, 240
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 240
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    LOAD tempColumnIdx, 241
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 241
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    LOAD tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    LOAD tempColumnIdx, 17
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 17
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    LOAD tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    LOAD tempColumnIdx, 31
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 31
+    CALL checkIfTempcellIdxIsAlive
     JUMP EvaluateCellsLife
 
 LeftBottomCorner:
-    LOAD tempColumnIdx, columnIdx
+    LOAD tempcellIdx, cellIdx
     ;move from the middle to the left
-    LOAD tempColumnIdx, 255
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 255
+    CALL checkIfTempcellIdxIsAlive
     ;move up
-    LOAD tempColumnIdx, 239
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 239
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    LOAD tempColumnIdx, 224
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 224
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    LOAD tempColumnIdx, 225
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 225
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    LOAD tempColumnIdx, 241
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 241
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    LOAD tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    LOAD tempColumnIdx, 0
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 0
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    LOAD tempColumnIdx, 15
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 15
+    CALL checkIfTempcellIdxIsAlive
     JUMP EvaluateCellsLife
 
 RightTopCorner:
-    LOAD tempColumnIdx, columnIdx
+    LOAD tempcellIdx, cellIdx
     ;move from the middle to the left
-    LOAD tempColumnIdx, 14
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 14
+    CALL checkIfTempcellIdxIsAlive
     ;move up
-    LOAD tempColumnIdx, 254
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 254
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    LOAD tempColumnIdx, 255
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 255
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    LOAD tempColumnIdx, 240
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 240
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    LOAD tempColumnIdx, 0
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 0
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    LOAD tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    LOAD tempColumnIdx, 31
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 31
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    LOAD tempColumnIdx, 30
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 30
+    CALL checkIfTempcellIdxIsAlive
     JUMP EvaluateCellsLife
 
 RightBottomCorner:
-    LOAD tempColumnIdx, columnIdx
+    LOAD tempcellIdx, cellIdx
     ;move from the middle to the left
-    LOAD tempColumnIdx, 254
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 254
+    CALL checkIfTempcellIdxIsAlive
     ;move up
-    LOAD tempColumnIdx, 238
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 238
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    LOAD tempColumnIdx, 239
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 239
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    LOAD tempColumnIdx, 224
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 224
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    LOAD tempColumnIdx, 240
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 240
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    LOAD tempColumnIdx, 0
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 0
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    LOAD tempColumnIdx, 15
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 15
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    LOAD tempColumnIdx, 14
-    CALL checkIfTempColumnIdxIsAlive
+    LOAD tempcellIdx, 14
+    CALL checkIfTempcellIdxIsAlive
     JUMP EvaluateCellsLife
 
 
 ;works for top and bottom edges and the middle of the board
 RegularPositionCount:
-    LOAD tempColumnIdx, columnIdx
+    LOAD tempcellIdx, cellIdx
     ;move from the middle to the left
-    SUB tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move up
-    SUB tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    ADD tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    ADD tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    ADD tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    ADD tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    SUB tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    SUB tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     JUMP EvaluateCellsLife
 
 LeftEdgePositionCount:
-    LOAD tempColumnIdx, columnIdx
+    LOAD tempcellIdx, cellIdx
     ;move from the middle to the left
-    ADD tempColumnIdx, 15
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 15
+    CALL checkIfTempcellIdxIsAlive
     ;move up
-    SUB tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    SUB tempColumnIdx, 15
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 15
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    ADD tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    ADD tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    ADD tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    SUB tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    ADD tempColumnIdx, 15
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 15
+    CALL checkIfTempcellIdxIsAlive
     JUMP EvaluateCellsLife
 
 RightEdgePositionCount:
-    LOAD tempColumnIdx, columnIdx
+    LOAD tempcellIdx, cellIdx
     ;move from the middle to the left
-    SUB tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move up
-    SUB tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    ADD tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     ;move right
-    SUB tempColumnIdx, 15
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 15
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    ADD tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move down
-    ADD tempColumnIdx, 16
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 16
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    ADD tempColumnIdx, 15
-    CALL checkIfTempColumnIdxIsAlive
+    ADD tempcellIdx, 15
+    CALL checkIfTempcellIdxIsAlive
     ;move left
-    SUB tempColumnIdx, 1
-    CALL checkIfTempColumnIdxIsAlive
+    SUB tempcellIdx, 1
+    CALL checkIfTempcellIdxIsAlive
     JUMP EvaluateCellsLife
 
-checkIfTempColumnIdxIsAlive:
-    FETCH tempColumnIdxValue, tempColumnIdx
-    COMP tempColumnIdxValue, aliveCell
+checkIfTempcellIdxIsAlive:
+    FETCH tempcellIdxValue, tempcellIdx
+    COMP tempcellIdxValue, aliveCell
     JUMP NZ, goBack
     incrementAliveCounter:
         ADD neighborCounter, 1
@@ -424,8 +445,7 @@ EvaluateCellsLife:
     CurrentCellIsDead:
         COMP neighborCounter, 3
         CALL Z, GiveBirthToCell
-
-        JUMP CellSurvives
+        RET
 
     CurrentCellIsAlive:
         COMP neighborCounter, 0
@@ -439,14 +459,22 @@ EvaluateCellsLife:
         JUMP CellSurvives
 
 CellSurvives:
-RET
+    ;switch to the second RAM page
+    LOAD ramPage, 1
+    OUT ramPage, ramPagePORT
+    LOAD sA, aliveCell
+    STORE sA, cellIdx
+    ;switch back to the first RAM page
+    LOAD ramPage, 0
+    OUT ramPage, ramPagePORT
+    RET
 
 KillCell:
     ;switch to the second RAM page
     LOAD ramPage, 1
     OUT ramPage, ramPagePORT
     LOAD sA, deadCell
-    STORE sA, columnIdx
+    STORE sA, cellIdx
     ;switch back to the first RAM page
     LOAD ramPage, 0
     OUT ramPage, ramPagePORT
@@ -457,14 +485,41 @@ GiveBirthToCell:
     LOAD ramPage, 1
     OUT ramPage, ramPagePORT
     LOAD sA, aliveCell
-    STORE sA, columnIdx
+    STORE sA, cellIdx
     ;switch back to the first RAM page
     LOAD ramPage, 0
     OUT ramPage, ramPagePORT
     RET
 
-ADD columnIdx, 1
-ADD isAtTheEOL, 1
+; ------------------------------------------------
+; ---------------DELAY FUNCTIONS------------------
+; ------------------------------------------------
+For1:
+	load s0, 255
+	wait1:
+		sub s0, 1
+		jump nz, wait1
+	RET
+
+For2:
+	load s2, 255
+	wait2:
+		call For1
+		sub s2, 1
+		jump nz, wait2
+	RET
+
+For3:
+	load sD, 255
+	wait3:
+		call For2
+		sub sD, 1
+		jump nz, wait3
+	RET
+
+Wait_07s:
+	call For3
+RET
 
 ; ------------------------------------------------
 ; ---------------RAM INITIALIZATION---------------
