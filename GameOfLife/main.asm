@@ -24,8 +24,8 @@
 .REG s8, tempColumnIdxValue
 
 ; ASCII consts:
-.CONST deadCell, 88  ; ASCII '_'
-.CONST aliveCell, 95 ; ASCII 'X'
+.CONST aliveCell, 88  ; ASCII 'X'
+.CONST deadCell, 95 ; ASCII '_'
 .CONST CR_char, 13
 .CONST LF_char, 10
 ; ------------------------------------------------
@@ -35,7 +35,7 @@
 LOAD columnIdx, 0
 LOAD ramPage, 0
 OUT ramPage, ramPagePORT
-LOAD s0, aliveCell
+LOAD s0, deadCell
 
 FillFirstPageOfRam:
     STORE s0, columnIdx
@@ -57,15 +57,15 @@ LOAD ramPage, 0
 OUT ramPage, ramPagePORT ; switching to the first page of RAM
 
 ; initialize the initial cells
-LOAD s0, deadCell
+LOAD s0, aliveCell
 STORE s0, 116
 STORE s0, 117
 STORE s0, 118
 STORE s0, 119
 STORE s0, 120
-LOAD s0, aliveCell
-STORE s0, 121
 LOAD s0, deadCell
+STORE s0, 121
+LOAD s0, aliveCell
 
 STORE s0, 122
 STORE s0, 123
@@ -90,7 +90,7 @@ LOAD s0, 0
 MainIterationLoop:
     FETCH s0, columnIdx
     CALL WriteToUart
-    CALL CountNeighbors
+    CALL CountNeighbors ; countNeighborsAndGenerate2Iteration
     ADD columnIdx, 1
     ADD isAtTheEOL, 1
     COMP isAtTheEOL, 16
@@ -413,7 +413,6 @@ EvaluateCellsLife:
 
 CellSurvives:
 RET
-;TBA
 
 KillCell:
     ;switch to the second RAM page
