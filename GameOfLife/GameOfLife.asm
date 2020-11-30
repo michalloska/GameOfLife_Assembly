@@ -103,7 +103,6 @@ LOAD isAtTheEOL, 0
 CALL CarriageReturn
 CALL LineFeed
 
-; s0 hold value 0
 LOAD s0, 0
 ; initialize board with initial values
 MainIterationLoop:
@@ -135,7 +134,7 @@ CarriageReturn:
     TEST uart0Status, uart0_txFull
     JUMP NZ, CarriageReturn
     ; end
-    LOAD sF, CR_char ; 13 in ASCII is the Carriage Return
+    LOAD sF, CR_char
     OUT sF, uart0_tx
     RET
 
@@ -145,7 +144,7 @@ LineFeed:
     TEST uart0Status, uart0_txFull
     JUMP NZ, LineFeed
     ; end
-    LOAD sF, LF_char ; 10 in ASCII is the Line Feed
+    LOAD sF, LF_char
     LOAD uart0Status, 0b00000000
     OUT sF, uart0_tx
     LOAD uart0Status, 0b00000000
@@ -201,7 +200,7 @@ rewriteSecondRamPageToTheFirstPage:
 CountNeighbors:
     LOAD neighborCounter, 0
     LOAD tempcellIdx, 0
-    LOAD tempcellIdxValue, 0 ; tempcellIdx value
+    LOAD tempcellIdxValue, 0
 
 CheckCorners:
     ; Left Top Corner
@@ -343,7 +342,6 @@ RightBottomCorner:
     LOAD tempcellIdx, 14
     CALL checkIfTempcellIdxIsAlive
     JUMP EvaluateCellsLife
-
 
 ;works for top and bottom edges and the middle of the board
 RegularPositionCount:
@@ -494,6 +492,7 @@ GiveBirthToCell:
 ; ------------------------------------------------
 ; ---------------DELAY FUNCTIONS------------------
 ; ------------------------------------------------
+
 For1:
     load s0, 255
     wait1:
